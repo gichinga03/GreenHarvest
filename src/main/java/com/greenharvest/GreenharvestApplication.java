@@ -1,4 +1,4 @@
-package com.greenharvest.greenharvest;
+package com.greenharvest;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
