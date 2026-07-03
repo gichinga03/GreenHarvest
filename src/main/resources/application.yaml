@@ -14,3 +14,12 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# JWT settings, injected via @Value in JwtService
+app:
+  jwt:
+    # In production this MUST come from an environment variable / secrets
+    # manager, never committed to source control. This default is for
+    # local dev only. Must be a Base64-encoded string >= 256 bits for HS256.
+    secret: ${JWT_SECRET:NDQ4ZTFhMTgyOTE0NmU4NmYyN2M1ZDNkYzY0MGY4ZTFmZWQ0YTdhZjJhYTNjNzc4ZjM0MzcwNzhhZjMzZTk1Yg==}
+    expiration-ms: ${JWT_EXPIRATION_MS:900000}   # 15 minutes

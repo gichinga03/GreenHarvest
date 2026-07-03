@@ -1,6 +1,6 @@
 package com.greenharvest.auth.service;
 
-import com.greenharvest.auth.model.User;
+import com.greenharvest.user.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -8,68 +8,89 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
+/**
+ * Owns everything about the JWT itself: creation, parsing, and the low
+ * level "is this token structurally valid and unexpired" check.
+ *
+ * Business questions ("is this user's role still what the token claims?")
+ * are deliberately NOT answered here — that's JwtAuthFilter's job, because
+ * it requires a DB lookup and this class should stay a pure token utility.
+ */
 @Service
 public class JwtService {
 
-    // Reads the signing key from your application.yml configuration
-    @Value("${app.jwt.secret}")
-    private String secretKey;
+    private final SecretKey signingKey;
+    private final long expirationMs;
 
-    // Reads the lifespan duration of the token from application.yml
-    @Value("${app.jwt.expiration-ms}")
-    private long jwtExpiration;
-
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = this.secretKey.getBytes(StandardCharsets.UTF_8);
-        return Keys.hmacShaKeyFor(keyBytes);
+    public JwtService(
+            @Value("${app.jwt.secret}") String base64Secret,
+            @Value("${app.jwt.expiration-ms}") long expirationMs) {
+        this.signingKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(base64Secret));
+        this.expirationMs = expirationMs;
     }
 
-    public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
-
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
-    }
-
-    // Generates a token packed with the user's role and full name metadata
     public String generateToken(User user) {
-        Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole().name());
-        extraClaims.put("fullName", user.getFullName());
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
-                .claims(extraClaims)
+                .id(UUID.randomUUID().toString())       // jti — used for logout blacklist
                 .subject(user.getEmail())
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
-                .signWith(getSignKey(), Jwts.SIG.HS256)
+                .claim("userId", user.getId())
+                .claim("role", user.getRole().name())
+                .claim("tokenVersion", user.getTokenVersion())
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(signingKey)
                 .compact();
     }
 
-    public boolean isTokenValid(String token, String userEmail) {
-        final String username = extractUsername(token);
-        return (username.equals(userEmail)) && !isTokenExpired(token);
+    public long getExpirationMs() {
+        return expirationMs;
     }
 
-    private boolean isTokenExpired(String token) {
+    public String extractEmail(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractJti(String token) {
+        return extractClaim(token, Claims::getId);
+    }
+
+    public int extractTokenVersion(String token) {
+        return extractAllClaims(token).get("tokenVersion", Integer.class);
+    }
+
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    public boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+    /** Structural + signature validity only. Version/blacklist checks live in the filter. */
+    public boolean isTokenWellFormed(String token) {
+        try {
+            extractAllClaims(token);
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private <T> T extractClaim(String token, Function<Claims, T> resolver) {
+        return resolver.apply(extractAllClaims(token));
     }
 
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getSignKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
