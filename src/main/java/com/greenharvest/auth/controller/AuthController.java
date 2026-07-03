@@ -2,8 +2,10 @@ package com.greenharvest.auth.controller;
 
 import com.greenharvest.auth.dto.LoginRequest;
 import com.greenharvest.auth.dto.LoginResponse;
+import com.greenharvest.auth.dto.RegisterRequest;
 import com.greenharvest.auth.service.AuthService;
 import com.greenharvest.common.response.ApiResponse;
+import com.greenharvest.user.api.dto.UserResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,13 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        UserResponse response = authService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("User registered successfully", response));
+    }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {

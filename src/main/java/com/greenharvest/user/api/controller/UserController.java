@@ -15,7 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ROLE_ADMIN')") // Admin-only protection for systemic user management
+@PreAuthorize("hasAuthority('ROLE_ADMINISTRATOR')") // Admin-only protection for systemic user management
 public class UserController {
 
     private final UserService userService;
