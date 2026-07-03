@@ -21,20 +21,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
-
-/**
- * Requirement 1 lives here: stateless sessions (JWT is the only auth
- * mechanism), BCrypt password hashing, and the filter chain that puts
- * JwtAuthFilter ahead of Spring's own username/password filter.
- *
- * Role -> endpoint restrictions are enforced with @PreAuthorize on
- * individual controller methods (via @EnableMethodSecurity below) rather
- * than centrally here, because that keeps the access rule next to the
- * business action it protects — easier for another developer to audit
- * one controller at a time instead of cross-referencing a giant matcher
- * list. The matrix documented in Role.java is the human-readable summary
- * of what those annotations collectively enforce.
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity

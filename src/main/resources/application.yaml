@@ -22,4 +22,4 @@ app:
     # manager, never committed to source control. This default is for
     # local dev only. Must be a Base64-encoded string >= 256 bits for HS256.
     secret: ${JWT_SECRET:NDQ4ZTFhMTgyOTE0NmU4NmYyN2M1ZDNkYzY0MGY4ZTFmZWQ0YTdhZjJhYTNjNzc4ZjM0MzcwNzhhZjMzZTk1Yg==}
-    expiration-ms: ${JWT_EXPIRATION_MS:900000}   # 15 minutes
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}   # 15 minutes changed to 24 hours for testing purpose
