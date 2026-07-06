@@ -2,11 +2,10 @@ package com.greenharvest.purchase.api.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
 import java.util.List;
 
 public record PurchaseRequest(
-        @NotBlank(message = "Invoice number is required")
+        // 💡 invoiceNumber is now optional; falls back to auto-generation if null/blank
         String invoiceNumber,
 
         @NotNull(message = "Supplier ID is required")
@@ -18,16 +17,16 @@ public record PurchaseRequest(
 
         String remarks
 ) {
-    public record ItemRequest(
-            @NotNull(message = "Product ID is required")
-            Long productId,
+        public record ItemRequest(
+                @NotNull(message = "Product ID is required")
+                Long productId,
 
-            @NotNull(message = "Quantity is required")
-            @Min(value = 1, message = "Quantity must be at least 1")
-            Integer quantity,
+                @NotNull(message = "Quantity is required")
+                @Min(value = 1, message = "Quantity must be at least 1")
+                Integer quantity,
 
-            @NotNull(message = "Unit price is required")
-            @Positive(message = "Unit price must be positive")
-            BigDecimal unitPrice
-    ) {}
+                @NotNull(message = "Unit price is required")
+                @Positive(message = "Unit price must be positive")
+                java.math.BigDecimal unitPrice
+        ) {}
 }

@@ -33,12 +33,22 @@ public class PurchaseService {
 
     @Transactional
     public PurchaseResponse recordPurchase(PurchaseRequest request) {
-        // 1. Prevent duplicate invoices
-        if (purchaseRepository.existsByInvoiceNumber(request.invoiceNumber().trim())) {
-            throw new DuplicateResourceException("Invoice number already processed: " + request.invoiceNumber());
+        String finalInvoiceNumber;
+
+        // 🎯 AUTOMATIC FALLBACK REFERENCE CALCULATION
+        if (request.invoiceNumber() == null || request.invoiceNumber().trim().isBlank()) {
+            finalInvoiceNumber = String.format("GH-PUR-%s-%s",
+                    java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd").format(java.time.LocalDateTime.now()),
+                    java.util.UUID.randomUUID().toString().substring(0, 5).toUpperCase()
+            );
+        } else {
+            finalInvoiceNumber = request.invoiceNumber().toUpperCase().trim();
+            // Prevent duplicate manual invoices
+            if (purchaseRepository.existsByInvoiceNumber(finalInvoiceNumber)) {
+                throw new DuplicateResourceException("Invoice number already processed: " + finalInvoiceNumber);
+            }
         }
 
-        // 2. Validate Supplier is operational
         Supplier supplier = supplierRepository.findById(request.supplierId())
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with ID: " + request.supplierId()));
 
@@ -46,16 +56,14 @@ public class PurchaseService {
             throw new ValidationException("Cannot accept goods from an inactive/suspended supplier.");
         }
 
-        // 3. Acquire current authenticated agent name
         String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        // 4. Construct parent envelope
         Purchase purchase = Purchase.builder()
-                .invoiceNumber(request.invoiceNumber().toUpperCase().trim())
+                .invoiceNumber(finalInvoiceNumber) // Securely mapped here
                 .supplier(supplier)
                 .remarks(request.remarks())
                 .recordedBy(currentUserEmail)
-                .totalAmount(BigDecimal.ZERO) // Recalculated dynamically below
+                .totalAmount(java.math.BigDecimal.ZERO)
                 .build();
 
         BigDecimal grandTotal = BigDecimal.ZERO;
