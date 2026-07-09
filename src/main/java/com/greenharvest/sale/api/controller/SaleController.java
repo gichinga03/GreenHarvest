@@ -1,10 +1,8 @@
 package com.greenharvest.sale.api.controller;
 
-import com.greenharvest.common.response.ApiResponse;
 import com.greenharvest.sale.api.dto.SaleRequest;
 import com.greenharvest.sale.api.dto.SaleResponse;
 import com.greenharvest.sale.service.SaleService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,23 +20,22 @@ public class SaleController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_SALES_OFFICER')")
-    public ResponseEntity<ApiResponse<SaleResponse>> recordSale(@Valid @RequestBody SaleRequest request) {
+    public ResponseEntity<SaleResponse> recordSale(@RequestBody SaleRequest request) {
         SaleResponse response = saleService.recordSale(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Outbound sales transaction processed successfully", response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_SALES_OFFICER')")
-    public ResponseEntity<ApiResponse<List<SaleResponse>>> getAllSales() {
+    public ResponseEntity<List<SaleResponse>> getAllSales() {
         List<SaleResponse> response = saleService.getAllSales();
-        return ResponseEntity.ok(ApiResponse.success("Sales historical logs retrieved successfully", response));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_SALES_OFFICER')")
-    public ResponseEntity<ApiResponse<SaleResponse>> getSaleById(@PathVariable Long id) {
+    public ResponseEntity<SaleResponse> getSaleById(@PathVariable Long id) {
         SaleResponse response = saleService.getSaleById(id);
-        return ResponseEntity.ok(ApiResponse.success("Outbound transaction details resolved", response));
+        return ResponseEntity.ok(response);
     }
 }

@@ -1,10 +1,8 @@
 package com.greenharvest.purchase.api.controller;
 
-import com.greenharvest.common.response.ApiResponse;
 import com.greenharvest.purchase.api.dto.PurchaseRequest;
 import com.greenharvest.purchase.api.dto.PurchaseResponse;
 import com.greenharvest.purchase.service.PurchaseService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,23 +20,22 @@ public class PurchaseController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_WAREHOUSE_OFFICER')")
-    public ResponseEntity<ApiResponse<PurchaseResponse>> recordPurchase(@Valid @RequestBody PurchaseRequest request) {
+    public ResponseEntity<PurchaseResponse> recordPurchase(@RequestBody PurchaseRequest request) {
         PurchaseResponse response = purchaseService.recordPurchase(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Stock shipment inbound transaction processed successfully", response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_WAREHOUSE_OFFICER')")
-    public ResponseEntity<ApiResponse<List<PurchaseResponse>>> getAllPurchases() {
+    public ResponseEntity<List<PurchaseResponse>> getAllPurchases() {
         List<PurchaseResponse> response = purchaseService.getAllPurchases();
-        return ResponseEntity.ok(ApiResponse.success("Purchase ledger logs retrieved successfully", response));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_WAREHOUSE_OFFICER')")
-    public ResponseEntity<ApiResponse<PurchaseResponse>> getPurchaseById(@PathVariable Long id) {
+    public ResponseEntity<PurchaseResponse> getPurchaseById(@PathVariable Long id) {
         PurchaseResponse response = purchaseService.getPurchaseById(id);
-        return ResponseEntity.ok(ApiResponse.success("Inbound transaction profile matching target resolved", response));
+        return ResponseEntity.ok(response);
     }
 }

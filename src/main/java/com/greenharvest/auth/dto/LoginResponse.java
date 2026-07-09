@@ -4,18 +4,17 @@ import com.greenharvest.auth.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-/**
- * Deliberately excludes password and internal tokenVersion — only what
- * the frontend needs to attach the token to subsequent requests and
- * render role-based UI.
- */
 @Getter
-@Builder
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class LoginResponse {
     private String token;
-    private String tokenType; // always "Bearer"
+    private String tokenType;
     private long expiresInMs;
     private Long userId;
     private String fullName;

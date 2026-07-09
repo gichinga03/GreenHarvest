@@ -13,14 +13,7 @@ import java.util.Date;
 import java.util.UUID;
 import java.util.function.Function;
 
-/**
- * Owns everything about the JWT itself: creation, parsing, and the low
- * level "is this token structurally valid and unexpired" check.
- *
- * Business questions ("is this user's role still what the token claims?")
- * are deliberately NOT answered here — that's JwtAuthFilter's job, because
- * it requires a DB lookup and this class should stay a pure token utility.
- */
+
 @Service
 public class JwtService {
 
@@ -74,7 +67,6 @@ public class JwtService {
         return extractExpiration(token).before(new Date());
     }
 
-    /** Structural + signature validity only. Version/blacklist checks live in the filter. */
     public boolean isTokenWellFormed(String token) {
         try {
             extractAllClaims(token);

@@ -1,8 +1,8 @@
 package com.greenharvest.sale.service;
 
-import com.greenharvest.common.exception.DuplicateResourceException;
 import com.greenharvest.common.exception.InsufficientStockException;
 import com.greenharvest.common.exception.ResourceNotFoundException;
+import com.greenharvest.common.exception.ValidationException;
 import com.greenharvest.product.model.Product;
 import com.greenharvest.product.repository.ProductRepository;
 import com.greenharvest.sale.api.dto.SaleRequest;
@@ -28,29 +28,48 @@ public class SaleService {
 
     @Transactional
     public SaleResponse recordSale(SaleRequest request) {
+        //  1. MANUAL PARENT ORDER VALIDATION (Requirement 7)
+        if (request.customerName() == null || request.customerName().trim().isBlank()) {
+            throw new ValidationException("Customer supermarket name is required");
+        }
+        if (request.items() == null || request.items().isEmpty()) {
+            throw new ValidationException("Sale dispatch must contain at least one item");
+        }
+
         String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        // 🎯 AUTOMATIC SEQUENCE GENERATION
-        // Formats out to e.g., GH-SAL-20260706-A8F2B
+        //  AUTOMATIC SEQUENCE GENERATION
         String generatedOrderNumber = String.format("GH-SAL-%s-%s",
                 java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd").format(java.time.LocalDateTime.now()),
                 java.util.UUID.randomUUID().toString().substring(0, 5).toUpperCase()
         );
 
         Sale sale = Sale.builder()
-                .orderNumber(generatedOrderNumber) // Assigned cleanly here
+                .orderNumber(generatedOrderNumber)
                 .customerName(request.customerName().trim())
-                .remarks(request.remarks())
+                .remarks(request.remarks() != null ? request.remarks().trim() : null)
                 .recordedBy(currentUserEmail)
                 .totalAmount(BigDecimal.ZERO)
                 .build();
 
         BigDecimal grandTotal = BigDecimal.ZERO;
 
+        //  2. PROCESS AND MANUALLY VALIDATE DISPATCH ITEMS
         for (SaleRequest.ItemRequest itemReq : request.items()) {
+            if (itemReq.productId() == null) {
+                throw new ValidationException("Product ID is required for all item records");
+            }
+            if (itemReq.quantity() == null || itemReq.quantity() < 1) {
+                throw new ValidationException("Quantity must be at least 1 unit");
+            }
+            if (itemReq.unitPrice() != null && itemReq.unitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Unit price must be positive if specified");
+            }
+
             Product product = productRepository.findById(itemReq.productId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + itemReq.productId()));
 
+            //  CHALLENGE B: Enforce physical warehouse limits before altering numbers
             if (product.getCurrentStock() < itemReq.quantity()) {
                 throw new InsufficientStockException(
                         String.format("Insufficient stock for product '%s' (SKU: %s). Requested: %d, Available: %d",
@@ -58,8 +77,7 @@ public class SaleService {
                 );
             }
 
-            // 🎯 AUTOMATIC CATALOG PRICE FALLBACK CALCULATION
-            // If itemReq.unitPrice() is null, default directly to product.getPrice()
+            // AUTOMATIC CATALOG PRICE FALLBACK CALCULATION
             BigDecimal finalUnitPrice = (itemReq.unitPrice() != null) ? itemReq.unitPrice() : product.getPrice();
 
             // Calculate derived line item totals using the evaluated final unit price
@@ -75,6 +93,7 @@ public class SaleService {
 
             sale.addItem(lineItem);
 
+            // Decrement stock levels securely
             product.setCurrentStock(product.getCurrentStock() - itemReq.quantity());
             productRepository.save(product);
         }

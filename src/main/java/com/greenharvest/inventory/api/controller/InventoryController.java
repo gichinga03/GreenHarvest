@@ -1,6 +1,5 @@
 package com.greenharvest.inventory.api.controller;
 
-import com.greenharvest.common.response.ApiResponse;
 import com.greenharvest.inventory.api.dto.InventoryDashboardResponse;
 import com.greenharvest.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +18,8 @@ public class InventoryController {
 
     @GetMapping("/dashboard")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_WAREHOUSE_OFFICER')")
-    public ResponseEntity<ApiResponse<InventoryDashboardResponse>> getInventoryDashboard() {
+    public ResponseEntity<InventoryDashboardResponse> getInventoryDashboard() {
         InventoryDashboardResponse response = inventoryService.getDashboardMetrics();
-        return ResponseEntity.ok(ApiResponse.success("Aggregated inventory status dashboard loaded", response));
+        return ResponseEntity.ok(response);
     }
 }

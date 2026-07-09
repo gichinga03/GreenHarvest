@@ -22,20 +22,20 @@ public class InventoryService {
         // Fetch the entire live inventory ledger line array
         List<Product> products = productRepository.findAll();
 
-        // 🎯 TOTAL COUNTS CALCULATION
+        //  TOTAL COUNTS CALCULATION
         long totalProductsCount = products.size();
 
-        // 🎯 TOTAL PHYSICAL VOLUME CALCULATION
+        // TOTAL PHYSICAL VOLUME CALCULATION
         long totalStockQuantity = products.stream()
                 .mapToLong(Product::getCurrentStock)
                 .sum();
 
-        // 🎯 TOTAL FINANCIAL VALUATION CALCULATION: Sum up (Stock * Selling Price)
+        //  TOTAL FINANCIAL VALUATION CALCULATION: Sum up (Stock * Selling Price)
         BigDecimal totalInventoryValue = products.stream()
                 .map(product -> BigDecimal.valueOf(product.getCurrentStock()).multiply(product.getPrice()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 🎯 LOW STOCK FILTERING CALCULATION
+        //  LOW STOCK FILTERING CALCULATION
         List<InventoryDashboardResponse.LowStockAlert> lowStockAlerts = products.stream()
                 .filter(product -> product.getCurrentStock() <= product.getMinimumStockLevel())
                 .map(product -> new InventoryDashboardResponse.LowStockAlert(

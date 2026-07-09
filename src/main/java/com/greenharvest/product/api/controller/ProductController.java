@@ -1,10 +1,8 @@
 package com.greenharvest.product.api.controller;
 
-import com.greenharvest.common.response.ApiResponse;
 import com.greenharvest.product.api.dto.ProductRequest;
 import com.greenharvest.product.api.dto.ProductResponse;
 import com.greenharvest.product.service.ProductService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,39 +20,38 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_WAREHOUSE_OFFICER')")
-    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody ProductRequest request) {
+    public ResponseEntity<ProductResponse> createProduct(@RequestBody ProductRequest request) {
         ProductResponse response = productService.createProduct(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Product created successfully", response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()") // Anyone logged in can browse the catalog
-    public ResponseEntity<ApiResponse<List<ProductResponse>>> getAllProducts() {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ProductResponse>> getAllProducts() {
         List<ProductResponse> response = productService.getAllProducts();
-        return ResponseEntity.ok(ApiResponse.success("Products catalog retrieved successfully", response));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable Long id) {
+    public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
         ProductResponse response = productService.getProductById(id);
-        return ResponseEntity.ok(ApiResponse.success("Product details retrieved successfully", response));
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_WAREHOUSE_OFFICER')")
-    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
+    public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long id,
-            @Valid @RequestBody ProductRequest request) {
+            @RequestBody ProductRequest request) {
         ProductResponse response = productService.updateProduct(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Product updated successfully", response));
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMINISTRATOR')") // Destructive drop actions restricted to system Admins
-    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRATOR')")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
-        return ResponseEntity.ok(ApiResponse.success("Product deleted successfully", null));
+        return ResponseEntity.noContent().build();
     }
 }

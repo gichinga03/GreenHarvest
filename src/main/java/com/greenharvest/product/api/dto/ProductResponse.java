@@ -9,8 +9,8 @@ public record ProductResponse(
         String name,
         String description,
         BigDecimal price,
-        Integer currentStock,
-        Integer minimumStockLevel,
+        int currentStock,
+        int minimumStockLevel,
         boolean isLowStock,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

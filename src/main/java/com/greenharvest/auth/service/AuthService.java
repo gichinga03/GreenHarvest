@@ -14,9 +14,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -27,18 +27,33 @@ public class AuthService {
     private final JwtService jwtService;
     private final TokenBlacklistService tokenBlacklistService;
 
-    /**
-     * Registers a new system user securely, converting internal dates safely.
-     */
+    //checking the parameters if the match
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        //  MANUAL VALIDATION FOR REGISTRATION (Requirement 7)
+        if (request.fullName() == null || request.fullName().trim().isBlank()) {
+            throw new ValidationException("Full name is required");
+        }
+        if (request.email() == null || request.email().trim().isBlank()) {
+            throw new ValidationException("Email is required");
+        }
+        if (!request.email().contains("@") || !request.email().contains(".")) {
+            throw new ValidationException("Email must be a valid email address");
+        }
+        if (request.password() == null || request.password().length() < 6) {
+            throw new ValidationException("Password is required and must be at least 6 characters long");
+        }
+        if (request.role() == null) {
+            throw new ValidationException("User role assignment is required");
+        }
+
+        if (userRepository.existsByEmail(request.email().trim())) {
             throw new DuplicateResourceException("Email is already registered: " + request.email());
         }
 
         User user = User.builder()
-                .fullName(request.fullName())
-                .email(request.email())
+                .fullName(request.fullName().trim())
+                .email(request.email().toLowerCase().trim())
                 .password(passwordEncoder.encode(request.password()))
                 .role(request.role())
                 .active(true)
@@ -59,20 +74,22 @@ public class AuthService {
         );
     }
 
-    /**
-     * Authenticates credentials and issues the custom LoginResponse payload block.
-     */
 
     public LoginResponse login(LoginRequest request) {
-        // Delegates to Spring Security's provider, which uses
-        // CustomUserDetailsService + BCryptPasswordEncoder under the hood.
-        // Throws BadCredentialsException on mismatch — handled centrally
-        // by GlobalExceptionHandler as a 401.
+        //  MANUAL VALIDATION FOR LOGIN (Requirement 7)
+        if (request.getEmail() == null || request.getEmail().trim().isBlank()) {
+            throw new ValidationException("Email is required");
+        }
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new ValidationException("Password is required");
+        }
+
+
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(request.getEmail().trim(), request.getPassword())
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail().trim())
                 .orElseThrow(() -> new IllegalStateException(
                         "Authenticated user not found — this should never happen"));
 

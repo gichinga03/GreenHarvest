@@ -1,10 +1,8 @@
 package com.greenharvest.supplier.api.controller;
 
-import com.greenharvest.common.response.ApiResponse;
 import com.greenharvest.supplier.api.dto.SupplierRequest;
 import com.greenharvest.supplier.api.dto.SupplierResponse;
 import com.greenharvest.supplier.service.SupplierService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,42 +20,40 @@ public class SupplierController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_WAREHOUSE_OFFICER')")
-    public ResponseEntity<ApiResponse<SupplierResponse>> createSupplier(@Valid @RequestBody SupplierRequest request) {
+    public ResponseEntity<SupplierResponse> createSupplier(@RequestBody SupplierRequest request) {
         SupplierResponse response = supplierService.createSupplier(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Supplier registered successfully", response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
     @PreAuthorize("isAuthenticated()") // Any authenticated employee can check supplier details
-    public ResponseEntity<ApiResponse<List<SupplierResponse>>> getAllSuppliers() {
+    public ResponseEntity<List<SupplierResponse>> getAllSuppliers() {
         List<SupplierResponse> response = supplierService.getAllSuppliers();
-        return ResponseEntity.ok(ApiResponse.success("Suppliers list retrieved successfully", response));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<SupplierResponse>> getSupplierById(@PathVariable Long id) {
+    public ResponseEntity<SupplierResponse> getSupplierById(@PathVariable Long id) {
         SupplierResponse response = supplierService.getSupplierById(id);
-        return ResponseEntity.ok(ApiResponse.success("Supplier details retrieved successfully", response));
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRATOR', 'ROLE_WAREHOUSE_OFFICER')")
-    public ResponseEntity<ApiResponse<SupplierResponse>> updateSupplier(
+    public ResponseEntity<SupplierResponse> updateSupplier(
             @PathVariable Long id,
-            @Valid @RequestBody SupplierRequest request) {
+            @RequestBody SupplierRequest request) {
         SupplierResponse response = supplierService.updateSupplier(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Supplier profiles updated successfully", response));
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRATOR')") // Changing status or suspending vendors is an Admin task
-    public ResponseEntity<ApiResponse<SupplierResponse>> toggleSupplierStatus(
+    public ResponseEntity<SupplierResponse> toggleSupplierStatus(
             @PathVariable Long id,
             @RequestParam boolean active) {
         SupplierResponse response = supplierService.toggleSupplierStatus(id, active);
-        String action = active ? "activated" : "deactivated";
-        return ResponseEntity.ok(ApiResponse.success("Supplier profile successfully " + action, response));
+        return ResponseEntity.ok(response);
     }
 }

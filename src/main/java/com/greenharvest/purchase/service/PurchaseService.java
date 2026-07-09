@@ -18,9 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,9 +31,17 @@ public class PurchaseService {
 
     @Transactional
     public PurchaseResponse recordPurchase(PurchaseRequest request) {
+        // 🎯 1. MANUAL PARENT REQUEST VALIDATION (Requirement 7)
+        if (request.supplierId() == null) {
+            throw new ValidationException("Supplier ID is required");
+        }
+        if (request.items() == null || request.items().isEmpty()) {
+            throw new ValidationException("Purchase order must contain at least one product line item");
+        }
+
         String finalInvoiceNumber;
 
-        // 🎯 AUTOMATIC FALLBACK REFERENCE CALCULATION
+        //  AUTOMATIC FALLBACK REFERENCE CALCULATION
         if (request.invoiceNumber() == null || request.invoiceNumber().trim().isBlank()) {
             finalInvoiceNumber = String.format("GH-PUR-%s-%s",
                     java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd").format(java.time.LocalDateTime.now()),
@@ -59,21 +65,31 @@ public class PurchaseService {
         String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
         Purchase purchase = Purchase.builder()
-                .invoiceNumber(finalInvoiceNumber) // Securely mapped here
+                .invoiceNumber(finalInvoiceNumber)
                 .supplier(supplier)
-                .remarks(request.remarks())
+                .remarks(request.remarks() != null ? request.remarks().trim() : null)
                 .recordedBy(currentUserEmail)
-                .totalAmount(java.math.BigDecimal.ZERO)
+                .totalAmount(BigDecimal.ZERO)
                 .build();
 
         BigDecimal grandTotal = BigDecimal.ZERO;
 
-        // 5. Process line items, run calculations, and update physical counts
+        // 2. PROCESS AND MANUALLY VALIDATE LINE ITEMS
         for (PurchaseRequest.ItemRequest itemReq : request.items()) {
+            if (itemReq.productId() == null) {
+                throw new ValidationException("Product ID is required for all line items");
+            }
+            if (itemReq.quantity() == null || itemReq.quantity() < 1) {
+                throw new ValidationException("Quantity must be at least 1 unit");
+            }
+            if (itemReq.unitPrice() == null || itemReq.unitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Unit cost price must be positive");
+            }
+
             Product product = productRepository.findById(itemReq.productId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + itemReq.productId()));
 
-            // 🎯 SERVICE CALCULATIONS: Line item total = quantity * unitPrice
+            // SERVICE CALCULATIONS: Line item total = quantity * unitPrice
             BigDecimal lineTotal = itemReq.unitPrice().multiply(BigDecimal.valueOf(itemReq.quantity()));
             grandTotal = grandTotal.add(lineTotal);
 
@@ -86,7 +102,7 @@ public class PurchaseService {
 
             purchase.addItem(lineItem);
 
-            // 🎯 INVENTORY CALCULATION UPDATE: Increment physical stock counts
+            // INVENTORY CALCULATION UPDATE: Increment physical stock counts
             product.setCurrentStock(product.getCurrentStock() + itemReq.quantity());
             productRepository.save(product);
         }
