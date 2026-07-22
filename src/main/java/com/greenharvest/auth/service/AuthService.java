@@ -8,9 +8,11 @@ import com.greenharvest.common.exception.ValidationException;
 import com.greenharvest.user.api.dto.UserResponse;
 import com.greenharvest.user.model.User;
 import com.greenharvest.user.repository.UserRepository;
+import com.greenharvest.common.security.LoginAttemptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +28,11 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final LoginAttemptService loginAttemptService; // Inject Lockout Service
 
-    //checking the parameters if the match
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        //  MANUAL VALIDATION FOR REGISTRATION (Requirement 7)
+        // MANUAL VALIDATION FOR REGISTRATION (Requirement 7)
         if (request.fullName() == null || request.fullName().trim().isBlank()) {
             throw new ValidationException("Full name is required");
         }
@@ -74,9 +76,8 @@ public class AuthService {
         );
     }
 
-
     public LoginResponse login(LoginRequest request) {
-        //  MANUAL VALIDATION FOR LOGIN (Requirement 7)
+        // MANUAL VALIDATION FOR LOGIN (Requirement 7)
         if (request.getEmail() == null || request.getEmail().trim().isBlank()) {
             throw new ValidationException("Email is required");
         }
@@ -84,19 +85,38 @@ public class AuthService {
             throw new ValidationException("Password is required");
         }
 
+        String email = request.getEmail().trim();
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail().trim(), request.getPassword())
-        );
+        // 1. CHECK IF ACCOUNT IS LOCKED OUT (5-MINUTE TIMEOUT)
+        if (loginAttemptService.isBlocked(email)) {
+            long remainingSecs = loginAttemptService.getRemainingLockoutSeconds(email);
+            long minutes = (remainingSecs / 60) + 1;
+            throw new ValidationException(
+                    "Account is temporarily locked due to 5 consecutive failed login attempts. Please try again in " + minutes + " minute(s)."
+            );
+        }
 
-        User user = userRepository.findByEmail(request.getEmail().trim())
+        // 2. ATTEMPT AUTHENTICATION
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, request.getPassword())
+            );
+        } catch (AuthenticationException ex) {
+            // Record failed attempt on incorrect password/email
+            loginAttemptService.loginFailed(email);
+            throw new ValidationException("Invalid email or password");
+        }
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException(
                         "Authenticated user not found — this should never happen"));
 
         if (!user.isActive()) {
-            // Throws your project's custom ValidationException instead of DisabledException
             throw new ValidationException("Account has been deactivated. Please contact administration.");
         }
+
+        // 3. SUCCESSFUL LOGIN -> RESET FAILED ATTEMPTS COUNTER
+        loginAttemptService.loginSucceeded(email);
 
         String token = jwtService.generateToken(user);
 
