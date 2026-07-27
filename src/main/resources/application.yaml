@@ -21,3 +21,9 @@ app:
 
     secret: ${JWT_SECRET:NDQ4ZTFhMTgyOTE0NmU4NmYyN2M1ZDNkYzY0MGY4ZTFmZWQ0YTdhZjJhYTNjNzc4ZjM0MzcwNzhhZjMzZTk1Yg==}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}   # 15 minutes changed to 24 hours for testing purpose
+  admin:
+    email: maxwell@greenharvest.com
+    password: SecurePassword123
+    full-name: Maxwell Mwaura
+
+
